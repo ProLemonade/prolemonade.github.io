@@ -11,6 +11,13 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;  
+            
+            user-select: none;  
+            touch-action: manipulation; 
+
         }
 
         body {
@@ -75,7 +82,7 @@
         }
 
         #playerContainer {
-            position: absolute;
+            position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
@@ -307,7 +314,7 @@
     <script>
         // ============= 游戏配置 =============
         const CONFIG = {
-            GAME_DURATION: 300000, // 游戏时长(ms) - Boss到达时间
+            GAME_DURATION: 180000, // 游戏时长(ms) - Boss到达时间
             PLAYER_SPEED: 6,
             BULLET_SPEED: 10,
             BULLET_INTERVAL: 150,
