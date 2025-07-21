@@ -370,6 +370,9 @@
         const playerImage = new Image();
         playerImage.src = './images/FireN.PNG';
 
+        const playerImagePower = new Image();
+        playerImagePower.src = './images/FireY.PNG';
+        
         class Player {
             constructor(canvas) {
                 this.canvas = canvas;
@@ -488,11 +491,8 @@ render(ctx) {
        ctx.globalAlpha = 0.5;
    }
 
-   // 根据power状态动态选择图像
-   const currentImageSrc = this.buffs.has('power') ? './images/FireY.PNG' : './images/FireN.PNG';
-   if (playerImage.src !== currentImageSrc) {
-       playerImage.src = currentImageSrc;
-   }
+   // 根据power状态选择预加载的图像
+   const currentImage = this.buffs.has('power') ? playerImagePower : playerImage;
 
    // 护盾效果 - 在玩家图像下方绘制
    if (this.buffs.has('shield')) {
