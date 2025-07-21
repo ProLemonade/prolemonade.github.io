@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>He's approaching!!!</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            min-width: 420px;
+            background: #0a0a0a;
+            font-family: 'Press Start 2P', monospace;
+            image-rendering: pixelated;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: linear-gradient(180deg, #001122 0%, #000511 100%);
+        }
+
+
+
+        #healthBar {
+            position: absolute;
+            top: 0px;
+            left: 5px;
+        }
+        #healthBar img {
+            height: 85px;
+            width: auto;
+        }
+
+
+        #scoreContainer {
+            position: absolute;
+            top: 40px;
+            right: 15px;
+            text-align: right;
+            color: #ffffff;
+        }
+        .label {
+            font-size: 14px;
+            color: #cccccc;
+            display: block;
+            margin-bottom: 20px;
+        }
+        #score {
+            font-size: 20px;
+            color: #ffff00;
+        }
+
+
+
+        #bossContainer {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #bossContainer img {
+            height: 100px;
+            width: auto;
+        }
+
+        #playerContainer {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #playerContainer img {
+            height: 100px;
+            width: auto;
+        }
+
+        @media (max-width: 510px) {
+
+            #bossContainer {
+                left: 250px;
+                top: 50px;
+            }
+
+            #fireContainer {
+                left: 250px;
+            }
+        }
+
+
+
+        .event-icons {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            display: flex;
+            gap: 12px;
+        }
+        .event-icon {
+            position: relative;
+            width: 50px;
+            height: 50px;
+        }
+        .event-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .cooldown-mask {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: rgba(0, 0, 0, 0.5);
+            transition: height 0.1s linear;
+            pointer-events: none;
+        }
+        .event-icon.ready {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: auto;
+        }
+        .control-btn {
+            width: 80px;
+            height: 80px;
+            background-color: transparent;
+            background-size: contain;
+            border: none;
+            outline: none;
+            opacity: 0.9;
+            transition: opacity 0.2s;
+            pointer-events: auto;
+        }
+        #leftBtn {
+            background-image: url('./images/left.png');
+        }
+        #rightBtn {
+            background-image: url('./images/right.png');
+        }
+        .control-btn:active {
+            opacity: 0.5;
+        }
+
+
+
+        #gameStart {
+            display: block;
+        }
+        #gameOver {
+            display: none;
+        }
+
+
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            background: #000c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+            color: #fff;
+            font-family: 'Press Start 2P', monospace;
+            z-index: 999;
+        }
+        .center-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .modal-title {
+            color: #ffff00;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        .modal-button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            font-size: 14px;
+            font-family: 'Press Start 2P', monospace;
+            background: #222;
+            color: #fff;
+            border: 2px solid #fff;
+            cursor: pointer;
+
+            width: 150px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+
+        }
+        .infinite {
+            font-size: 30px;
+            color: #ff3333;
+        }
+
+
+
+
+
+
+
+
+
+
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="gameUI">
+        <div id="healthBar">
+                <img src="./images/Blood3.PNG" id="bloodImage">
+        </div>
+
+        <div id="scoreContainer">
+            <span class="label">SCORES</span>
+            <span id="score">000000</span>
+        </div>
+
+        <div id="bossContainer">
+            <img src="./images/BOSS.PNG" alt="Boss" id="bossImage">
+        </div>
+
+        <div id="playerContainer">
+            <img src="./images/FireN.PNG" alt=Fire>
+        </div>
+
+
+        <div class="event-icons">
+            <div class="event-icon" id="eventFlash">
+                <img src="./images/EventFlash.PNG" alt="Flash">
+                <div class="cooldown-mask"></div>
+            </div>
+            <div class="event-icon" id="eventSpike">
+                <img src="./images/EventStrike.PNG" alt="Strike">
+                <div class="cooldown-mask"></div>
+            </div>
+            <div class="event-icon" id="eventProjectile">
+                <img src="./images/EventBullet.PNG" alt="Bullet">
+                <div class="cooldown-mask"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="buff-icon" id="buffIcons"></div>
+
+    <div id="controls">
+        <button class="control-btn" id="leftBtn"></button>
+        <button class="control-btn" id="rightBtn"></button>
+    </div>
+    <!-- 游戏开始弹窗 -->
+    <div id="gameStart" class="modal">
+        <div class="center-wrapper">
+            <div class="modal-title">Score as much as you can</div>
+            <div class="modal-title">before <span class="infinite">∞</span> comes.</div>
+            <button id="startBtn" class="modal-button">START</button>
+        </div>
+    </div>
+    <!-- 游戏结束弹窗 -->
+    <div id="gameOver" class="modal">
+        <div class="center-wrapper">
+            <div id="gameOverReason" class="modal-title"></div>
+            <div class="modal-title" style="padding: 10px;">
+                <p>Final Score: <span id="finalScore">000000</span></p>
+            </div>
+            <button id="restartBtn" class="modal-button">RESTART</button>
+        </div>
+    </div>
+
+    <script>
+        // ============= 游戏配置 =============
+        const CONFIG = {
+            GAME_DURATION: 300000, // 游戏时长(ms) - Boss到达时间
+            PLAYER_SPEED: 6,
+            BULLET_SPEED: 10,
+            BULLET_INTERVAL: 150,
+            PLAYER_MAX_HEALTH: 3,
+            EVENT_COOLDOWN: 3000,
+            POWERUP_SPAWN_RATE: 0.002,
+            BOSS_FLASH_DISTANCE: 100,
+            BOSS_RETREAT_DISTANCE: 30
+        };
+
+        // ============= 全局变量声明 =============
+        let gameState;
+        let player;
+        let boss;
+        let bulletSystem;
+        let eventSystem;
+        let powerUpSystem;
+        let inputManager;
+        let renderer;
+        let gameLoopId;
+
+        // ============= 游戏状态管理器 =============
+        class GameState {
+            constructor() {
+                this.running = false;
+                this.score = 0;
+                this.startTime = 0;
+                this.gameOverReason = '';
+            }
+
+            reset() {
+                this.running = true;
+                this.score = 0;
+                this.startTime = Date.now();
+                this.gameOverReason = '';
+            }
+
+            addScore(points) {
+                this.score += points;
+                document.getElementById('score').textContent = this.score;
+            }
+
+            endGame(reason) {
+                this.running = false;
+                this.gameOverReason = reason;
+                if (gameLoopId) {
+                    cancelAnimationFrame(gameLoopId);
+                }
+                setTimeout(() => this.showGameOver(), 500);
+            }
+
+            showGameOver() {
+                document.getElementById('gameOverReason').textContent = this.gameOverReason;
+                document.getElementById('finalScore').textContent = this.score;
+                document.getElementById('gameOver').style.display = 'block';
+            }
+        }
+
+        // ============= 玩家系统 =============
+        const playerImage = new Image();
+        playerImage.src = './images/FireN.PNG';
+
+        class Player {
+            constructor(canvas) {
+                this.canvas = canvas;
+
+                const playerDiv = document.getElementById('playerContainer');
+                const rect = playerDiv.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+
+                this.x = rect.left - canvasRect.left;
+                this.y = rect.top - canvasRect.top;
+
+                this.width = 100;
+                this.height = 100;
+                this.speed = CONFIG.PLAYER_SPEED;
+                this.health = CONFIG.PLAYER_MAX_HEALTH;
+                this.maxHealth = CONFIG.PLAYER_MAX_HEALTH;
+                this.buffs = new Map();
+                this.invulnerable = false;
+            }
+
+            update() {
+                // 更新位置
+                if (inputManager.leftPressed && this.x > 0) {
+                    this.x -= this.speed;
+                }
+                if (inputManager.rightPressed && this.x < this.canvas.width - this.width) {
+                    this.x += this.speed;
+                }
+
+                // 更新Buff
+                this.updateBuffs();
+
+                // 边界检查
+                this.x = Math.max(0, Math.min(this.canvas.width - this.width, this.x));
+            }
+
+            updateBuffs() {
+                const now = Date.now();
+                for (let [type, endTime] of this.buffs) {
+                    if (now > endTime) {
+                        this.buffs.delete(type);
+                    }
+                }
+                this.updateBuffUI();
+            }
+
+            updateBuffUI() {
+                const buffIcons = document.getElementById('buffIcons');
+                buffIcons.innerHTML = '';
+                for (let [type, endTime] of this.buffs) {
+                    const icon = document.createElement('div');
+                    icon.className = 'buff';
+                    icon.style.background = this.getBuffColor(type);
+                    icon.textContent = this.getBuffIcon(type);
+                    buffIcons.appendChild(icon);
+                }
+            }
+
+            getBuffColor(type) {
+                const colors = {
+                    'shield': '#4444ff',
+                    'power': '#ff4444',
+                    'homing': '#44ff44'
+                };
+                return colors[type] || '#666';
+            }
+
+            getBuffIcon(type) {
+                const icons = {
+                    'shield': '🛡',
+                    'power': '⚡',
+                    'homing': '🎯'
+                };
+                return icons[type] || '?';
+            }
+
+            takeDamage(amount = 1) {
+                if (this.invulnerable || this.buffs.has('shield')) {
+                    return false;
+                }
+
+                this.health -= amount;
+                this.updateHealthUI();
+
+                // 短暂无敌时间
+                this.invulnerable = true;
+                setTimeout(() => this.invulnerable = false, 500);
+
+                if (this.health <= 0) {
+                    gameState.endGame('Weapon Destroyed！');
+                    return true;
+                }
+                return false;
+            }
+
+            heal(amount = 1) {
+                this.health = Math.min(this.maxHealth, this.health + amount);
+                this.updateHealthUI();
+            }
+
+            addBuff(type, duration) {
+                this.buffs.set(type, Date.now() + duration);
+            }
+
+            updateHealthUI() {
+                const bloodImage = document.getElementById('bloodImage');
+
+                if (!bloodImage) return;
+
+                const clampedHealth = Math.max(0, Math.min(this.health, this.maxHealth)); // 防止越界
+                bloodImage.src = `./images/Blood${clampedHealth}.PNG`;
+            }
+
+render(ctx) {
+   if (this.invulnerable && Date.now() % 200 < 100) {
+       ctx.globalAlpha = 0.5;
+   }
+
+   // 根据power状态动态选择图像
+   const currentImageSrc = this.buffs.has('power') ? './images/FireY.PNG' : './images/FireN.PNG';
+   if (playerImage.src !== currentImageSrc) {
+       playerImage.src = currentImageSrc;
+   }
+
+   // 护盾效果 - 在玩家图像下方绘制
+   if (this.buffs.has('shield')) {
+       const centerX = this.x + this.width / 2;
+       const centerY = this.y + this.height / 1.5;
+       const shieldRadius = Math.max(this.width, this.height) / 2 + 13;
+
+       ctx.beginPath();
+       ctx.arc(centerX, centerY, shieldRadius, 0, Math.PI * 2);
+       ctx.strokeStyle = 'rgba(135, 206, 250, 0.8)';
+       ctx.lineWidth = 2;
+       ctx.stroke();
+   }
+
+   // 绘制玩家图像
+   if (playerImage.complete) {
+       ctx.drawImage(playerImage, this.x, this.y, this.width, this.height);
+   } else {
+       ctx.fillStyle = '#00FF00'; // 备用绿色方块
+       ctx.fillRect(this.x, this.y, this.width, this.height);
+   }
+
+   ctx.globalAlpha = 1;
+}
+
+        }
+
+        // ============= Boss系统 =============
+        const bossImage = new Image();
+        bossImage.src = './images/BOSS.PNG';
+
+        class Boss {
+
+            constructor(canvas) {
+                this.canvas = canvas;
+                const bossDiv = document.getElementById('bossContainer');
+                const rect = bossDiv.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+
+                this.x = rect.left - canvasRect.left;
+                this.y = rect.top - canvasRect.top;
+
+                this.width = 100;
+                this.height = 100;
+                this.targetY = canvas.height;  // Boss最终位置
+                this.speed = this.calculateSpeed();
+            }
+
+            calculateSpeed() {
+                // 根据游戏时长计算Boss下降速度
+                const distance = this.targetY - this.y;
+                return distance / (CONFIG.GAME_DURATION / 16.67); // 60fps
+            }
+
+            update() {
+                if (this.y < this.targetY) {
+                    this.y += this.speed;
+
+                    // Boss到达玩家位置
+                    if (this.y >= this.targetY) {
+                        gameState.endGame('Game Over!');
+                    }
+                }
+            }
+
+            flash() {
+                // Boss闪现到随机位置
+                const minX = this.width;
+                const maxX = this.canvas.width - this.width * 2;
+                this.x = Math.random() * (maxX - minX) + minX;
+
+                // 闪现特效
+                renderer.addEffect({
+                    type: 'flash',
+                    x: this.x + this.width / 2,
+                    y: this.y + this.height / 2,
+                    duration: 500,
+                    color: 'rgba(0, 0, 0, 0.5)'
+                });
+            }
+
+
+            render(ctx) {
+                if (bossImage.complete) {
+                    ctx.drawImage(bossImage, this.x, this.y, this.width, this.height);
+                } else {
+                    ctx.fillStyle = '#FF0000';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+
+            }
+
+        }
+
+        // ============= 子弹系统 =============
+        class BulletSystem {
+            constructor() {
+                this.bullets = [];
+                this.lastFireTime = 0;
+                this.powerBulletImg = new Image();
+                this.powerBulletImg.src = './images/BuffPowerNow.PNG';
+                this.fireworkTriggered = false;
+            }
+
+            update(player, boss) {
+                const isPower = player.buffs.has('power');
+
+
+                const now = Date.now();
+
+                // 自动发射
+                const interval = isPower ? CONFIG.BULLET_INTERVAL * 1.5 : CONFIG.BULLET_INTERVAL;
+
+                if (now - this.lastFireTime > interval) {
+                    this.fire(player, boss);
+                    this.lastFireTime = now;
+                }
+
+
+                // 更新子弹
+                for (let i = this.bullets.length - 1; i >= 0; i--) {
+                    const bullet = this.bullets[i];
+
+                    if (player.buffs.has('homing')) {
+                        // 制导弹药
+                        const dx = (boss.x + boss.width/2) - (bullet.x + bullet.width/2);
+                        const dy = (boss.y + boss.height/2) - (bullet.y + bullet.height/2);
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+
+                        if (distance > 0) {
+                            bullet.vx = (dx / distance) * bullet.speed * 0.3;
+                            bullet.vy = (dy / distance) * bullet.speed;
+                        }
+
+                        bullet.x += bullet.vx;
+                        bullet.y += bullet.vy;
+                    } else {
+                        bullet.y -= bullet.speed;
+                    }
+
+                    // 移除屏幕外的子弹
+                    if (bullet.y < -10 || bullet.x < -10 || bullet.x > this.canvas?.width + 10) {
+                        this.bullets.splice(i, 1);
+                        continue;
+                    }
+
+                    // 碰撞检测
+                    if (this.checkCollision(bullet, boss)) {
+                        this.bullets.splice(i, 1);
+
+                        const damage = isPower ? 50 : 10;
+                        gameState.addScore(damage);
+
+
+                        if (this.checkCollision(bullet, boss)) {
+                            this.bullets.splice(i, 1);
+
+                            const damage = isPower ? 100 : 10;
+                            gameState.addScore(damage);
+
+                            renderer.addEffect({
+                                type: 'hit',
+                                x: bullet.x,
+                                y: bullet.y,
+                                duration: 200
+                            });
+
+                            if (isPower) {
+                                const fireworkX = Math.random() * (this.canvas?.width || 800);
+                                const fireworkY = Math.random() * (this.canvas?.height || 600);
+
+                                for (let i = 0; i < 3; i++) {
+                                    setTimeout(() => {
+                                        renderer.addEffect({
+                                            type: 'firework',
+                                            x: fireworkX,
+                                            y: fireworkY,
+                                            duration: 1000
+                                        });
+                                    }, i * 100); //
+                                }
+                            }
+                        }
+
+                        renderer.addEffect({
+                            type: 'hit',
+                            x: bullet.x,
+                            y: bullet.y,
+                            duration: 200
+                        });
+
+
+                }
+
+                }
+            }
+
+            fire(player, boss) {
+                const isPower = player.buffs.has('power');
+
+                const bullet = {
+                    x: player.x + player.width / 2 - (isPower ? 6 : 2), // 保证两种子弹都居中
+                    y: player.y,
+                    width: isPower ? 40 : 4,
+                    height: isPower ? 40 : 12,
+                    speed: isPower ? CONFIG.BULLET_SPEED * 0.2 : CONFIG.BULLET_SPEED,
+                    vx: 0,
+                    vy: isPower ? -CONFIG.BULLET_SPEED * 0.2 : -CONFIG.BULLET_SPEED,
+                    power: isPower, // 标记power子弹，方便渲染和逻辑
+                    image: isPower ? this.powerBulletImg : null
+                };
+
+                this.bullets.push(bullet);
+            }
+
+
+
+            checkCollision(bullet, boss) {
+                return bullet.x < boss.x + boss.width &&
+                       bullet.x + bullet.width > boss.x &&
+                       bullet.y < boss.y + boss.height &&
+                       bullet.y + bullet.height > boss.y;
+            }
+
+            render(ctx) {
+                this.bullets.forEach(bullet => {
+                    if (bullet.power && bullet.image && bullet.image.complete) {
+                        ctx.drawImage(bullet.image, bullet.x, bullet.y, bullet.width, bullet.height);
+                    } else {
+                        ctx.fillStyle = '#FFFF00';
+                        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                    }
+                });
+            }
+
+
+        }
+
+        // ============= 事件系统 =============
+        class EventSystem {
+            constructor() {
+                this.events = {
+                    flash: { ready: false, cooldown: Date.now() + 3000, maxCooldown: 15000 }, // 10秒后才能发动
+                    spike: { ready: false, cooldown: Date.now() + 15000, maxCooldown: 10000 }, // 15秒后
+                    projectile: { ready: false, cooldown: Date.now() + 5000, maxCooldown: 5000 } // 5秒后
+                };
+
+
+                this.activeSpikes = [];
+                this.activeProjectiles = [];
+
+                this.spikeImg = new Image();
+                this.spikeImg.src = './images/Spike.PNG';
+
+                this.spikeWarnImg = new Image();
+                this.spikeWarnImg.src = './images/Spike.PNG';
+
+                this.projectileImg = new Image();
+                this.projectileImg.src = './images/Projectile.PNG';
+            }
+
+            update(player, boss) {
+                this.updateCooldowns();
+                this.updateActiveEvents(player);
+                this.triggerRandomEvent(player, boss);
+            }
+
+            updateCooldowns() {
+                const now = Date.now();
+                for (let [type, event] of Object.entries(this.events)) {
+                    if (!event.ready && now > event.cooldown) {
+                        event.ready = true;
+                        this.updateEventUI(type);
+                    } else if (!event.ready) {
+                        this.updateEventUI(type);
+                    }
+                }
+            }
+
+
+            updateActiveEvents(player) {
+                // 更新地刺（支持反复刺）
+                for (let i = this.activeSpikes.length - 1; i >= 0; i--) {
+                    const spike = this.activeSpikes[i];
+                    if (Date.now() > spike.endTime) {
+                        this.activeSpikes.splice(i, 1);
+                    } else {
+                        if (spike.active) {
+                            // 反复刺逻辑（正弦波模拟）
+                            const elapsed = Date.now() - spike.startActiveTime;
+                            const phase = (elapsed % spike.cycleTime) / spike.cycleTime; // 0~1
+                            const offset = Math.sin(phase * Math.PI * 2) * spike.maxOffset;
+                            spike.currentY = spike.baseY - offset;
+
+                            if (this.checkPlayerCollision(player, spike, spike.currentY)) {
+                                player.takeDamage();
+                            }
+                        }
+                    }
+                }
+
+                // 更新投射物
+                for (let i = this.activeProjectiles.length - 1; i >= 0; i--) {
+                    const proj = this.activeProjectiles[i];
+
+                    proj.x += proj.vx;
+                    proj.y += proj.vy;
+
+
+                    // 删除投射物
+                    if (proj.x < -50 || proj.x > canvas.width + 50 || proj.y < -50 || proj.y > canvas.height + 50) {
+                        this.activeProjectiles.splice(i, 1);
+                    } else if (this.checkPlayerCollision(player, proj)) {
+                        player.takeDamage();
+                        this.activeProjectiles.splice(i, 1);
+                    }
+                }
+            }
+
+            triggerRandomEvent(player, boss) {
+                const readyEvents = Object.keys(this.events).filter(type => this.events[type].ready);
+                if (readyEvents.length === 0 || Math.random() > 0.01) return;
+
+                const eventType = readyEvents[Math.floor(Math.random() * readyEvents.length)];
+                this.triggerEvent(eventType, player, boss);
+            }
+
+            triggerEvent(type, player, boss) {
+                const event = this.events[type];
+                event.ready = false;
+                event.cooldown = Date.now() + event.maxCooldown;
+                this.updateEventUI(type);
+
+                switch (type) {
+                    case 'flash': boss.flash(); break;
+                    case 'spike': this.createSpike(player); break;
+                    case 'projectile': this.createProjectile(player); break;
+                }
+            }
+
+
+            createSpike(player) {
+                const warningTime = 1000;
+                const duration = 2000;
+
+                const spike = {
+                    x: player.x - 20,
+                    baseY: player.y + player.height + 5,
+                    width: player.width + 40,
+                    height: 30,
+                    active: false,
+                    warning: true,
+                    endTime: Date.now() + duration,
+                    currentY: player.y + player.height + 5, // 当前y
+                    startActiveTime: 0,
+                    cycleTime: 1000,
+                    maxOffset: 15
+                };
+
+                setTimeout(() => {
+                    spike.warning = false;
+                    spike.active = true;
+                    spike.startActiveTime = Date.now();
+                }, warningTime);
+
+                this.activeSpikes.push(spike);
+            }
+            createProjectile(player) {
+                const startX = Math.random() * canvas.width;
+                const startY = -30;
+
+                const angle = Math.atan2(player.y - startY, player.x - startX);
+                const speed = 4;
+
+                const proj = {
+                    x: startX,
+                    y: startY,
+                    width: 40,
+                    height: 40,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    hasBounced: false
+                };
+
+                this.activeProjectiles.push(proj);
+            }
+            checkPlayerCollision(player, obj, customY = null) {
+                const y = customY !== null ? customY : obj.y;
+                return player.x < obj.x + obj.width &&
+                    player.x + player.width > obj.x &&
+                    player.y < y + obj.height &&
+                    player.y + player.height > y;
+            }
+
+        updateEventUI(type) {
+            const element = document.getElementById(`event${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            if (!element) return;
+
+            const mask = element.querySelector('.cooldown-mask');
+            const event = this.events[type];
+
+            if (event.ready) {
+                element.classList.add('ready');
+                if (mask) mask.style.height = '0%'; // 无遮罩
+            } else {
+                element.classList.remove('ready');
+
+                if (mask) {
+                    const now = Date.now();
+                    const remaining = Math.max(0, event.cooldown - now);
+                    const percent = remaining / event.maxCooldown;
+                    mask.style.height = `${Math.floor(percent * 100)}%`;
+                }
+            }
+        }
+
+
+
+            render(ctx) {
+                // 地刺渲染
+                this.activeSpikes.forEach(spike => {
+                    const drawY = spike.warning ? spike.baseY : spike.currentY;
+                    ctx.globalAlpha = spike.warning ? 0.4 : 1.0;
+                    ctx.drawImage(this.spikeWarnImg, spike.x, drawY, spike.width, spike.height);
+                    ctx.globalAlpha = 1.0;
+                });
+
+                // 投射物渲染
+                this.activeProjectiles.forEach(proj => {
+                    ctx.drawImage(this.projectileImg, proj.x, proj.y, proj.width, proj.height);
+                });
+            }
+        }
+
+        // ============= 道具系统 =============
+        class PowerUpSystem {
+            constructor() {
+                this.powerUps = [];
+
+                // 预加载道具图片
+                this.images = {
+                    'heal': new Image(),
+                    'shield': new Image(),
+                    'power': new Image(),
+                    'homing': new Image()
+                };
+
+                this.images['heal'].src = './images/BuffHeal.PNG';
+                this.images['shield'].src = './images/BuffShield.PNG';
+                this.images['power'].src = './images/BuffPower.PNG';
+                this.images['homing'].src = './images/BuffHoming.PNG';
+            }
+
+            update(player) {
+                // 生成道具
+                if (Math.random() < CONFIG.POWERUP_SPAWN_RATE) {
+                    this.spawnPowerUp();
+                }
+
+                // 更新道具
+                for (let i = this.powerUps.length - 1; i >= 0; i--) {
+                    const powerUp = this.powerUps[i];
+                    powerUp.y += 2;
+
+                    // 移除屏幕外的道具
+                    if (powerUp.y > canvas.height + 20) {
+                        this.powerUps.splice(i, 1);
+                        continue;
+                    }
+
+                    // 碰撞检测
+                    if (this.checkCollision(powerUp, player)) {
+                        this.applyPowerUp(powerUp.type, player);
+                        this.powerUps.splice(i, 1);
+                    }
+                }
+            }
+
+            spawnPowerUp() {
+                const types = ['heal', 'shield', 'power', 'homing'];
+                const type = types[Math.floor(Math.random() * types.length)];
+
+                this.powerUps.push({
+                    x: Math.random() * (canvas.width - 30),
+                    y: -20,
+                    width: 80,
+                    height: 80,
+                    type: type
+                });
+            }
+
+            applyPowerUp(type, player) {
+                switch(type) {
+                    case 'heal':
+                        player.heal();
+                        break;
+                    case 'shield':
+                        player.addBuff('shield', 5000);
+                        break;
+                    case 'power':
+                        player.addBuff('power', 8000);
+                        break;
+                    case 'homing':
+                        player.addBuff('homing', 10000);
+                        break;
+                }
+
+                // 道具获取特效
+                renderer.addEffect({
+                    type: 'powerup',
+                    x: player.x + player.width/2,
+                    y: player.y + player.height/2,
+                    duration: 500
+                });
+            }
+
+            checkCollision(powerUp, player) {
+                return powerUp.x < player.x + player.width &&
+                       powerUp.x + powerUp.width > player.x &&
+                       powerUp.y < player.y + player.height &&
+                       powerUp.y + powerUp.height > player.y;
+            }
+
+            render(ctx) {
+                this.powerUps.forEach(powerUp => {
+                    const img = this.images[powerUp.type];
+                    if (img.complete) {
+                        ctx.drawImage(img, powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+                    } else {
+                        // 图片未加载完成时，显示占位色
+                        ctx.fillStyle = '#888';
+                        ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+                    }
+                });
+            }
+        }
+
+       // ============= 输入管理器 =============
+       class InputManager {
+           constructor() {
+               this.leftPressed = false;
+               this.rightPressed = false;
+               this.setupEventListeners();
+           }
+
+           setupEventListeners() {
+               // 键盘事件
+               document.addEventListener('keydown', (e) => {
+                   if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                       this.leftPressed = true;
+                       e.preventDefault();
+                   }
+                   if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                       this.rightPressed = true;
+                       e.preventDefault();
+                   }
+               });
+
+               document.addEventListener('keyup', (e) => {
+                   if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                       this.leftPressed = false;
+                       e.preventDefault();
+                   }
+                   if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                       this.rightPressed = false;
+                       e.preventDefault();
+                   }
+               });
+
+               // 按钮控制
+               this.setupButtonControls();
+
+               // 触摸控制
+               this.setupTouchControls();
+           }
+
+           setupButtonControls() {
+               const leftBtn = document.getElementById('leftBtn');
+               const rightBtn = document.getElementById('rightBtn');
+
+               leftBtn.addEventListener('mousedown', () => this.leftPressed = true);
+               leftBtn.addEventListener('mouseup', () => this.leftPressed = false);
+               leftBtn.addEventListener('mouseleave', () => this.leftPressed = false);
+
+               rightBtn.addEventListener('mousedown', () => this.rightPressed = true);
+               rightBtn.addEventListener('mouseup', () => this.rightPressed = false);
+               rightBtn.addEventListener('mouseleave', () => this.rightPressed = false);
+
+               leftBtn.addEventListener('touchstart', (e) => {
+                   e.preventDefault();
+                   this.leftPressed = true;
+               });
+               leftBtn.addEventListener('touchend', (e) => {
+                   e.preventDefault();
+                   this.leftPressed = false;
+               });
+
+               rightBtn.addEventListener('touchstart', (e) => {
+                   e.preventDefault();
+                   this.rightPressed = true;
+               });
+               rightBtn.addEventListener('touchend', (e) => {
+                   e.preventDefault();
+                   this.rightPressed = false;
+               });
+           }
+
+           setupTouchControls() {
+               let touchStartX = 0;
+
+               canvas.addEventListener('touchstart', (e) => {
+                   e.preventDefault();
+                   touchStartX = e.touches[0].clientX;
+               });
+
+               canvas.addEventListener('touchmove', (e) => {
+                   e.preventDefault();
+                   const touchX = e.touches[0].clientX;
+                   const deltaX = touchX - touchStartX;
+
+                   if (Math.abs(deltaX) > 20) {
+                       if (deltaX > 0) {
+                           this.rightPressed = true;
+                           this.leftPressed = false;
+                       } else {
+                           this.leftPressed = true;
+                           this.rightPressed = false;
+                       }
+                       touchStartX = touchX;
+                   }
+               });
+
+               canvas.addEventListener('touchend', (e) => {
+                   e.preventDefault();
+                   this.leftPressed = false;
+                   this.rightPressed = false;
+               });
+           }
+       }
+
+       // ============= 渲染器 =============
+       class Renderer {
+           constructor(canvas) {
+               this.canvas = canvas;
+               this.ctx = canvas.getContext('2d');
+               this.effects = [];
+           }
+
+           addEffect(effect) {
+                effect.startTime = Date.now();
+
+                if (effect.type === 'firework') {
+                    const count = 50; // 减少粒子数量避免性能问题
+                    effect.particles = [];
+                    for (let i = 0; i < count; i++) {
+                        const angle = (Math.PI * 2 * i) / count;
+                        const speed = Math.random() * 3 + 1;
+                        effect.particles.push({
+                            x: effect.x,
+                            y: effect.y,
+                            radius: Math.random() * 2 + 1,
+                            color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            alpha: 1
+                        });
+                    }
+                }
+
+                this.effects.push(effect); // 只添加一次
+            }
+
+
+           updateEffects() {
+                const now = Date.now();
+
+                this.effects = this.effects.filter(effect => {
+                    const progress = (now - effect.startTime) / effect.duration;
+
+                    if (effect.type === 'firework') {
+                        effect.particles.forEach(p => {
+                            p.x += p.vx;
+                            p.y += p.vy;
+                            p.vx *= 0.98; // 添加阻力
+                            p.vy *= 0.98;
+                            p.alpha = Math.max(0, 1 - progress); // 基于整体进度淡出
+                        });
+                    }
+
+                    return progress < 1;
+                });
+            }
+
+
+           renderEffects() {
+               const now = Date.now();
+               this.effects.forEach(effect => {
+                   const progress = (now - effect.startTime) / effect.duration;
+                   this.renderEffect(effect, progress);
+               });
+           }
+
+           renderEffect(effect, progress) {
+               this.ctx.save();
+
+               switch(effect.type) {
+                   case 'flash':
+                       this.ctx.globalAlpha = 1 - progress;
+                       this.ctx.fillStyle = '#ffffff';
+                       this.ctx.beginPath();
+                       this.ctx.arc(effect.x, effect.y, 50 * progress, 0, 2 * Math.PI);
+                       this.ctx.fill();
+                       break;
+
+                   case 'hit':
+                       this.ctx.globalAlpha = 1 - progress;
+                       this.ctx.fillStyle = '#ffff00';
+                       this.ctx.beginPath();
+                       this.ctx.arc(effect.x, effect.y, 20 * progress, 0, 2 * Math.PI);
+                       this.ctx.fill();
+                       break;
+
+                   case 'powerup':
+                       this.ctx.globalAlpha = 1 - progress;
+                       this.ctx.strokeStyle = '#00ff00';
+                       this.ctx.lineWidth = 3;
+                       this.ctx.beginPath();
+                       this.ctx.arc(effect.x, effect.y, 30 * progress, 0, 2 * Math.PI);
+                       this.ctx.stroke();
+                       break;
+
+                   case 'firework':
+                        effect.particles.forEach(p => {
+                            this.ctx.globalAlpha = p.alpha;
+                            this.ctx.fillStyle = p.color;
+                            this.ctx.beginPath();
+                            this.ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+                            this.ctx.fill();
+                        });
+                        break;
+
+               }
+
+               this.ctx.restore();
+           }
+
+           clear() {
+               this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+           }
+
+           render() {
+               this.clear();
+
+               // 渲染游戏对象
+               if (player) player.render(this.ctx);
+               if (boss) boss.render(this.ctx);
+               if (bulletSystem) bulletSystem.render(this.ctx);
+               if (eventSystem) eventSystem.render(this.ctx);
+               if (powerUpSystem) powerUpSystem.render(this.ctx);
+
+               // 渲染特效
+               this.updateEffects();
+               this.renderEffects();
+           }
+       }
+
+       // ============= 游戏初始化 =============
+       const canvas = document.getElementById('gameCanvas');
+
+       // ============= 设置画布大小 =============
+       function resizeCanvas() {
+           canvas.width = window.innerWidth;
+           canvas.height = window.innerHeight;
+
+           // 重新计算游戏对象位置
+           if (player) {
+               player.canvas = canvas;
+               player.x = Math.min(player.x, canvas.width - player.width);
+               player.y = canvas.height - 80;
+           }
+
+           if (boss) {
+               boss.canvas = canvas;
+               boss.targetY = canvas.height * 0.3;
+               boss.speed = boss.calculateSpeed();
+           }
+       }
+
+       // ============= 游戏主循环 =============
+       function gameLoop() {
+           if (!gameState || !gameState.running) return;
+
+           try {
+               // 更新游戏系统
+               if (player) player.update();
+               if (boss) boss.update();
+               if (bulletSystem && player && boss) bulletSystem.update(player, boss);
+               if (eventSystem && player && boss) eventSystem.update(player, boss);
+               if (powerUpSystem && player) powerUpSystem.update(player);
+
+               // 渲染
+               if (renderer) renderer.render();
+
+               gameLoopId = requestAnimationFrame(gameLoop);
+           } catch (error) {
+               console.error('Something Wrong…:', error);
+               if (gameState) {
+                   gameState.endGame('Error…');
+               }
+           }
+       }
+
+       // ============= 游戏控制 =============
+       function initGame() {
+           // 初始化画布
+           resizeCanvas();
+           window.addEventListener('resize', resizeCanvas);
+
+           // 创建输入管理器
+           inputManager = new InputManager();
+
+           // 绑定按钮事件
+           document.getElementById('startBtn').addEventListener('click', startGame);
+           document.getElementById('restartBtn').addEventListener('click', restartGame);
+       }
+       function startGame() {
+           // 隐藏开始弹窗
+           document.getElementById('gameStart').style.display = 'none';
+           document.getElementById('gameOver').style.display = 'none';
+
+           document.getElementById('bossContainer').style.opacity = '0';
+            document.getElementById('playerContainer').style.opacity = '0';
+
+           // 重置游戏状态
+           gameState = new GameState();
+           gameState.reset();
+
+           // 重新创建所有游戏系统
+           player = new Player(canvas);
+           boss = new Boss(canvas);
+           bulletSystem = new BulletSystem();
+           eventSystem = new EventSystem();
+           powerUpSystem = new PowerUpSystem();
+           renderer = new Renderer(canvas);
+
+           // 初始化UI
+           player.updateHealthUI();
+           document.getElementById('score').textContent = '0';
+
+           // 初始化事件图标
+           eventSystem.updateEventUI('flash');
+           eventSystem.updateEventUI('spike');
+           eventSystem.updateEventUI('projectile');
+
+           // 开始游戏循环
+           gameLoop();
+
+           console.log('Start！');
+       }
+       function restartGame() {
+           // 停止当前游戏循环
+           if (gameLoopId) {
+               cancelAnimationFrame(gameLoopId);
+           }
+
+           // 重新开始游戏
+           startGame();
+       }
+
+       // ============= 页面加载完成后初始化 =============
+       document.addEventListener('DOMContentLoaded', function() {
+           console.log('页面加载完成，初始化游戏...');
+           initGame();
+       });
+
+       // 防止页面滚动
+       document.addEventListener('touchmove', function(e) {
+           e.preventDefault();
+       }, { passive: false });
+
+       // 防止双击缩放
+       document.addEventListener('dblclick', function(e) {
+           e.preventDefault();
+       });
+   </script>
+</body>
+</html>
